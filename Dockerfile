@@ -51,4 +51,10 @@ RUN echo "export PYTHONPATH=${PYTHONPATH}:${SOURCE_DIR}" >> /root/.bashrc
 WORKDIR ${SANDBOX_DIR}
 RUN env -i /bin/bash -c '(source testing-env.sh; env > test.env)'
 
+WORKDIR ${SOURCE_DIR}/eval
+RUN sed -i -e 's/\r$//' *.sh
+WORKDIR ${SOURCE_DIR}/benchmarks
+RUN sed -i -e 's/\r$//' *
+RUN ./prepare_coreutils.sh
+
 WORKDIR /root/learch/learch

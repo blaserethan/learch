@@ -16,15 +16,6 @@ make -j${NUM_MAKE_CORES}
 cd src
 find . -executable -type f | xargs -I '{}' extract-bc '{}'
 
-# build LLVM bitcode files instrumented with UBSan
-cd ../..
-mkdir obj-ubsan
-cd obj-ubsan
-CC=wllvm FORCE_UNSAFE_CONFIGURE=1 CFLAGS="-g -O1 -Xclang -disable-llvm-passes -D__NO_STRING_INLINES -D_FORTIFY_SOURCE=0 -U__OPTIMIZE__ -fsanitize=signed-integer-overflow -fsanitize=unsigned-integer-overflow -fsanitize=shift -fsanitize=bounds -fsanitize=pointer-overflow -fsanitize=null" ../configure --disable-nls
-make -j${NUM_MAKE_CORES}
-cd src
-find . -executable -type f | xargs -I '{}' extract-bc '{}'
-
 # build binaries with gcov
 # you can parallelize this part with standard parallelization tools like GNU parallel
 cd ..
