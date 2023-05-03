@@ -37,6 +37,7 @@
 #include <experimental/filesystem>
 #include <algorithm>
 #include <set>
+#include <math.h>
 
 #include <Python.h>
 
@@ -135,6 +136,97 @@ void BFSSearcher::update(ExecutionState *current,
       assert(ok && "invalid state removed");
     }
   }
+}
+
+///
+
+MCTSSearcher::MCTSSearcher(Executor &_executor)
+  : executor(_executor) {
+}
+
+MCTSSearcher::~MCTSSearcher() {
+}
+
+ExecutionState &MCTSSearcher::selectState() {
+
+  unsigned long minUCTScore = ULONG_MAX;
+  std::vector<ExecutionState *> selectSet;
+  // std::cout << "states:" << std::endl;
+  for(auto & state : states) {
+    subpath_ty subpath;
+    executor.getSubpath(state, subpath, 2);
+    unsigned long currSubpathCount = executor.getSubpathCount(subpath, 2);
+    
+    subpath_ty parent_subpath;
+    unsigned long parentSubpathCount = 1;
+    if (state->ptreeNode->parent){
+      ExecutionState *parent_state = state->ptreeNode->parent->state;
+      executor.getSubpath(parent_state, parent_subpath, 2);
+      parentSubpathCount = executor.getSubpathCount(parent_subpath, 2);
+    }
+
+    // Compute the UCT-1 score for selection of next node
+    state->predicted_reward += (state->coveredSource.size())/(state->queryCost.toSeconds()+1.0);
+    double exploit = (state->predicted_reward)/(currSubpathCount+1); //div cumulative reward by the number of times path has been executed
+    double explore = sqrt(log(1+(parentSubpathCount)/currSubpathCount));
+    double uct_score = explore + sqrt(2)*exploit;
+
+    if(uct_score < minUCTScore) {
+      selectSet.clear();
+      minUCTScore = uct_score;
+    }
+
+    if(uct_score == minUCTScore) {
+      selectSet.push_back(state);
+    }
+  }
+
+  unsigned int random = theRNG.getInt32() % selectSet.size();
+  ExecutionState *selection = selectSet[random];
+
+  // Update subpath statistics to reflect the selection made
+  if (!executor.getFeatureExtract()) {
+    subpath_ty subpath;
+    executor.getSubpath(selection, subpath, 2);
+    // std::cout << "selected: ";
+    // printSubpath(currentSubpath);
+    // std::cout << std::endl;
+    // std::cout << std::endl;
+    executor.incSubpath(subpath, 2);
+  }
+  selection->predicted_reward = 0;
+
+  return *selection;
+
+}
+
+void MCTSSearcher::update(klee::ExecutionState *current,
+                         const std::vector<ExecutionState *> &addedStates,
+                         const std::vector<ExecutionState *> &removedStates) {
+  states.insert(states.end(),
+                addedStates.begin(),
+                addedStates.end());
+  std::set<ExecutionState *> removed;
+  for (std::vector<ExecutionState *>::const_iterator it = removedStates.begin(),
+                                                     ie = removedStates.end();
+       it != ie; ++it) {
+    ExecutionState *es = *it;
+    if (removed.find(es) != removed.end()) continue;
+    __attribute__((unused))
+    bool ok = false;
+
+    for (std::vector<ExecutionState*>::iterator it = states.begin(),
+           ie = states.end(); it != ie; ++it) {
+      if (es==*it) {
+        states.erase(it);
+        ok = true;
+        break;
+      }
+    }
+    
+    assert(ok && "invalid state removed");
+    removed.insert(es);
+  }                        
 }
 
 ///

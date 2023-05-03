@@ -82,6 +82,7 @@ namespace klee {
       BFS,
       RandomState,
       RandomPath,
+      MCTS,
       NURS_CovNew,
       NURS_MD2U,
       NURS_Depth,
@@ -143,6 +144,23 @@ namespace klee {
     bool empty() { return states.empty(); }
     void printName(llvm::raw_ostream &os) {
       os << "BFSSearcher\n";
+    }
+  };
+
+  class MCTSSearcher : public Searcher {
+    Executor &executor;
+    std::vector<ExecutionState*> states;
+
+  public:
+    MCTSSearcher(Executor &_executor);
+    ~MCTSSearcher();
+    ExecutionState &selectState();
+    void update(ExecutionState *current,
+                const std::vector<ExecutionState *> &addedStates,
+                const std::vector<ExecutionState *> &removedStates);
+    bool empty() { return states.empty(); }
+    void printName(llvm::raw_ostream &os) {
+      os << "MCTSSearcher\n";
     }
   };
 
