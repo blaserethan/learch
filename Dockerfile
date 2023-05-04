@@ -57,7 +57,7 @@ RUN wget https://ftp.gnu.org/gnu/coreutils/coreutils-6.11.tar.gz
 RUN tar -xzvf coreutils-6.11.tar.gz
 WORKDIR ${SOURCE_DIR}/benchmarks/coreutils-6.11
 RUN mkdir obj-gcov
-WORKDIR ${SOURCE_DIR}/benchmarks/obj-gcov
+WORKDIR ${SOURCE_DIR}/benchmarks/coreutils-6.11/obj-gcov
 RUN ../configure --disable-nls CFLAGS="-g -fprofile-arcs -ftest-coverage"
 RUN make
 RUN make -C src arch hostname
@@ -71,7 +71,15 @@ RUN make -C src arch hostname
 WORKDIR ${SOURCE_DIR}/benchmarks/coreutils-6.11/obj-llvm/src
 RUN find . -executable -type f | xargs -I '{}' extract-bc '{}'
 
+WORKDIR /root/learch/learch
+RUN git clone https://github.com/blaserethan/learch.git ethan-learch
+WORKDIR /root/learch/learch/ethan-learch/klee
+RUN mkdir build
+WORKDIR /root/learch/learch/ethan-learch/build
+RUN cmake -DENABLE_SOLVER_STP=ON -DENABLE_POSIX_RUNTIME=ON -DENABLE_KLEE_UCLIBC=ON -DKLEE_UCLIBC_PATH=/root/klee-uclibc -DENABLE_UNIT_TESTS=OFF -DENABLE_SYSTEM_TESTS=OFF -DLLVM_CONFIG_BINARY=/usr/bin/llvm-config -DLLVMCC=/usr/bin/clang -DLLVMCXX=/usr/bin/clang++ -DLIB_PYTHON=/usr/lib/python3.6/config-3.6m-x86_64-linux-gnu/libpython3.6m.so -DPYTHON_INCLUDE_DIRS=/usr/include/python3.6m/ ..
+RUN make -j2
+RUN make install
+
 WORKDIR ${SOURCE_DIR}/eval
 RUN ./eval_gen_tests_coreutils.sh /root/learch/learch/eval/output 30
-
 WORKDIR /root/learch/learch
